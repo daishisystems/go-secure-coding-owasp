@@ -3,32 +3,22 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	inputHandler "github.com/daishisystems/go-secure-coding-owasp/03/whitelisting/pkg/handlers/input"
+	inputService "github.com/daishisystems/go-secure-coding-owasp/03/whitelisting/pkg/services/input"
 )
 
 func main() {
-	// Define a map of allowed values
-	allowedValues := map[string]bool{
-		"foo": true,
-		"bar": true,
-		"baz": true,
+	inputValues := inputService.NewInputValues()
+	inputHandler := inputHandler.NewInputHandler(inputValues)
+
+	server := http.Server{
+		Addr:    ":8080",
+		Handler: inputHandler,
 	}
 
-	// Define the HTTP handler function
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Get user input from query parameter
-		userInput := r.URL.Query().Get("input")
-
-		// Check if user input is in the map of allowed values
-		if _, ok := allowedValues[userInput]; ok {
-			fmt.Fprintf(w, "Valid input: %s", userInput)
-		} else {
-			fmt.Fprint(w, "Invalid input")
-		}
-	})
-
-	// Start the web server
 	fmt.Println("Listening on port 8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		panic(err)
 	}
 }
