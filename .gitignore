@@ -398,3 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 *.exe
 03/boundary-checking/.vscode/launch.json
+03/whitelisting/.vscode/launch.json
