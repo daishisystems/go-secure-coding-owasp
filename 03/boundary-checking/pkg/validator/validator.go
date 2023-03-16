@@ -20,5 +20,6 @@ func (s *IntegerValidator) Validate(value string) (int, error) {
 	if num < 1 || num > 100 {
 		return 0, fmt.Errorf("input out of range")
 	}
+
 	return num, nil
 }
