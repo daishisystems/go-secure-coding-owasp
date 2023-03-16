@@ -9,37 +9,37 @@ import (
 )
 
 type Handler struct {
-	calculate       *calculator.Calculate
-	integerValidate *validator.IntegerValidate
+	calculator       *calculator.Calculator
+	integerValidator *validator.IntegerValidator
 }
 
 func (h *Handler) AddHandler(w http.ResponseWriter, r *http.Request) {
 	num1Str := r.URL.Query().Get("num1")
 	num2Str := r.URL.Query().Get("num2")
 
-	num1, num2, err := h.integerValidate.IsValidInteger(num1Str, num2Str)
+	num1, err := h.integerValidator.Validate(num1Str)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	result := h.calculate.Add(num1, num2)
+	num2, err := h.integerValidator.Validate(num2Str)
 	if err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	result := h.calculator.Add(num1, num2)
 	fmt.Fprintf(w, "%d", result)
 }
 
 func main() {
-	calculate := &calculator.Calculate{}
-	integerValidate := &validator.IntegerValidate{}
 	handler := &Handler{
-		calculate:       calculate,
-		integerValidate: integerValidate,
+		calculator:       calculator.NewCalculator(),
+		integerValidator: validator.NewIntegerValidator(),
 	}
 
 	http.HandleFunc("/add", handler.AddHandler)
+	fmt.Println("Listening on port 8080")
 	http.ListenAndServe(":8080", nil)
 }
