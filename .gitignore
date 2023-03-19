@@ -399,3 +399,4 @@ FodyWeavers.xsd
 *.exe
 03/boundary-checking/.vscode/launch.json
 03/whitelisting/.vscode/launch.json
+03/character-escaping/.vscode/launch.json
