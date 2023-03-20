@@ -39,7 +39,7 @@ func (h *Handler) AddHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	handler := &Handler{
-		validator: validate.NewNullByteCheck(),
+		validator: validate.NewValidator(),
 	}
 
 	http.HandleFunc("/containsnullbyte", handler.AddHandler)

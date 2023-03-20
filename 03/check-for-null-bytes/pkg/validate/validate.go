@@ -6,7 +6,7 @@ import (
 
 type Validator struct{}
 
-func NewNullByteCheck() *Validator {
+func NewValidator() *Validator {
 	return &Validator{}
 }
 
