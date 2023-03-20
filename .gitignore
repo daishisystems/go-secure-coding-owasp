@@ -401,3 +401,4 @@ FodyWeavers.xsd
 03/whitelisting/.vscode/launch.json
 03/character-escaping/.vscode/launch.json
 03/numeric-validation/.vscode/launch.json
+03/check-for-null-bytes/.vscode/launch.json
