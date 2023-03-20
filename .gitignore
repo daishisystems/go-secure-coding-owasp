@@ -404,3 +404,4 @@ FodyWeavers.xsd
 03/check-for-null-bytes/.vscode/launch.json
 03/check-for-new-line-characters/.vscode/launch.json
 03/check-for-path-alteration-characters/.vscode/launch.json
+03/checks-for-extended-utf-8/.vscode/launch.json
