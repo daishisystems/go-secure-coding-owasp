@@ -1,5 +1,7 @@
 package validate
 
+import "strings"
+
 type Validator struct{}
 
 func NewValidator() *Validator {
@@ -7,10 +9,6 @@ func NewValidator() *Validator {
 }
 
 func (*Validator) ContainsNewLine(input string) bool {
-	for _, char := range input {
-		if char == '\n' {
-			return true
-		}
-	}
-	return false
+	index := strings.IndexByte(input, '\n')
+	return index >= 0
 }
