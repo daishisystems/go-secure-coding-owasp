@@ -403,3 +403,4 @@ FodyWeavers.xsd
 03/numeric-validation/.vscode/launch.json
 03/check-for-null-bytes/.vscode/launch.json
 03/check-for-new-line-characters/.vscode/launch.json
+03/check-for-path-alteration-characters/.vscode/launch.json
