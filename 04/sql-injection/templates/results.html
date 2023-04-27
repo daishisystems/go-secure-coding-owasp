@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Search Results</title>
+</head>
+
+<body>
+    <h1>Patient Search Results</h1>
+    {{if .}}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Surname</th>
+                <th>Age</th>
+                <th>Gender</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td>{{.Surname}}</td>
+                <td>{{.Age}}</td>
+                <td>{{.Gender}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p>No results found</p>
+    {{end}}
+</body>
+
+</html>
