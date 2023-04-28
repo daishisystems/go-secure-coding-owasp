@@ -2,8 +2,8 @@ package patient
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
-	"text/template"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -25,7 +25,8 @@ func HandleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT name, surname, age, gender FROM patients WHERE surname LIKE '%" + query + "%'")
+	rows, err := db.Query("SELECT name, surname, age, gender FROM patients WHERE age = " + query)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -43,10 +44,12 @@ func HandleSearch(w http.ResponseWriter, r *http.Request) {
 		results = append(results, p)
 	}
 
-	tmpl := template.Must(template.ParseFiles("templates/results.html"))
-	err = tmpl.Execute(w, results)
+	jsonData, err := json.Marshal(results)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
 }
