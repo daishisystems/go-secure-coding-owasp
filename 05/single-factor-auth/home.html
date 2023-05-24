@@ -2,17 +2,46 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
     <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .home-page {
+            text-align: center;
+        }
+
+        .home-page h1 {
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Welcome!</h1>
-    <p>You have successfully logged in.</p>
-    <form method="post" action="/logout">
-        <div>
-            <button type="submit">Logout</button>
+    <div class="container home-page">
+        <div class="logo">
+            <img src="static/globomantics-logo.png" alt="Company Logo">
         </div>
-    </form>
+        <h1>Welcome to the Globomantics Healthcare application</h1>
+        <p>Here you can search for patients</p>
+        <p>and you can manage prescriptions</p>
+    </div>
 </body>
 
 </html>

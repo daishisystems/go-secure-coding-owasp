@@ -24,7 +24,22 @@ func main() {
 	userSecretKeys = make(map[string]string)
 	http.HandleFunc("/", loginHandler)
 	http.HandleFunc("/verify", verifyHandler)
+	http.HandleFunc("/home", homeHandler)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "home.html")
+}
+
+func isAuthenticated(r *http.Request) bool {
+	// Implement your authentication logic here
+	// For example, you can check if a session or token exists
+	// and verify its validity to determine if the user is authenticated
+
+	// Return true if the user is authenticated, false otherwise
+	return true
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -118,9 +133,24 @@ func verifyHandler(w http.ResponseWriter, r *http.Request) {
 		// Validate the TOTP passcode
 		valid := totp.Validate(passcode, secretKey)
 		if valid {
-			fmt.Fprintf(w, "Authentication successful!")
+			// Redirect to the home page
+			http.Redirect(w, r, "/home.html", http.StatusSeeOther)
+			return
 		} else {
+			// Authentication failed, show error message
 			fmt.Fprintf(w, "Authentication failed!")
+			return
 		}
+	}
+
+	// Handle GET request for the verification page
+	tmpl, err := template.ParseFiles("verify.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
