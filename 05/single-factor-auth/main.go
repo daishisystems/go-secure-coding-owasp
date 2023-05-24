@@ -1,80 +1,126 @@
 package main
 
 import (
-	"database/sql"  // Package for working with SQL databases
-	"fmt"           // Package to format text
-	"html/template" // Package to parse and execute HTML templates
-	"log"           // Package for logging
-	"net/http"      // Package for HTTP requests and responses
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"html/template"
+	"image/png"
+	"log"
+	"net/http"
 
-	_ "github.com/go-sql-driver/mysql" // MySQL driver
-	"golang.org/x/crypto/bcrypt"       // Package to hash and compare passwords
+	"github.com/pquerna/otp/totp"
 )
 
-// Define a struct to hold information about a user
-type user struct {
-	id       int
-	username string
-	password string
+type TemplateData struct {
+	Username    string
+	QRCodeImage string
+	SecretKey   string
 }
 
+var userSecretKeys map[string]string
+
 func main() {
-	// Connect to MySQL database using a DSN (Data Source Name)
-	db, err := sql.Open("mysql", "root:admin@tcp(localhost:3306)/globomantics")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close() // Defer closing the database connection until the end of the function
+	userSecretKeys = make(map[string]string)
+	http.HandleFunc("/", loginHandler)
+	http.HandleFunc("/verify", verifyHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
 
-	// Serve the login page
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" {
-			// Get the username and password submitted in the login form
-			username := r.FormValue("username")
-			password := r.FormValue("password")
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		username := r.FormValue("username")
 
-			// Query the database for the user with the given username
-			row := db.QueryRow("SELECT id, username, password FROM users WHERE username = ?", username)
-			var u user
-			err := row.Scan(&u.id, &u.username, &u.password)
+		// Check if the user already has a secret key stored
+		secretKey, ok := userSecretKeys[username]
+		if !ok {
+			// Generate TOTP key
+			key, err := totp.Generate(totp.GenerateOpts{
+				Issuer:      "globomantics.com",
+				AccountName: username,
+			})
 			if err != nil {
-				// Log the error and return an HTTP 401 Unauthorized response
-				log.Printf("Failed login attempt for user %q: %v", username, err)
-				http.Error(w, "Invalid username or password", http.StatusUnauthorized)
-				return
+				log.Fatal(err)
 			}
 
-			// Check if the password is correct using bcrypt
-			err = bcrypt.CompareHashAndPassword([]byte(u.password), []byte(password))
+			// Store the secret key
+			userSecretKeys[username] = key.Secret()
+			secretKey = key.Secret()
+
+			// Convert TOTP key into a PNG image
+			img, err := key.Image(200, 200)
 			if err != nil {
-				// Log the error and return an HTTP 401 Unauthorized response
-				log.Printf("Failed login attempt for user %q: %v", username, err)
-				http.Error(w, "Invalid username or password", http.StatusUnauthorized)
-				return
+				log.Fatal(err)
 			}
 
-			// If the login was successful, display a welcome message
-			fmt.Fprintf(w, "Welcome, %s!", u.username)
-			return
+			// Encode PNG image to byte slice
+			var buf bytes.Buffer
+			err = png.Encode(&buf, img)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			qrCodeImage := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+			// Prepare the data for the template
+			data := TemplateData{
+				Username:    username,
+				QRCodeImage: qrCodeImage,
+				SecretKey:   secretKey,
+			}
+
+			tmpl, err := template.ParseFiles("verify.html")
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err = tmpl.Execute(w, data)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			// User already has a secret key, display the verification form directly
+			data := TemplateData{
+				Username:  username,
+				SecretKey: secretKey,
+			}
+
+			tmpl, err := template.ParseFiles("verify.html")
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err = tmpl.Execute(w, data)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
-
-		// If the login form was not submitted yet, serve the login form
-		tmpl, err := template.ParseFiles("login.html") // Parse the login form template
+	} else {
+		// Render the login page
+		tmpl, err := template.ParseFiles("login.html")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// Set the Content-Type header of the response to "text/html"
-		w.Header().Set("Content-Type", "text/html")
-
-		// Execute the login form template with no data and write the result to the response
 		err = tmpl.Execute(w, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
-	})
+	}
+}
 
-	// Listen on port 8080 and serve requests indefinitely
-	log.Println("Listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+func verifyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		// Retrieve the passcode and secret key from the form
+		passcode := r.FormValue("passcode")
+		secretKey := r.FormValue("secretKey")
+
+		// Validate the TOTP passcode
+		valid := totp.Validate(passcode, secretKey)
+		if valid {
+			fmt.Fprintf(w, "Authentication successful!")
+		} else {
+			fmt.Fprintf(w, "Authentication failed!")
+		}
+	}
 }
