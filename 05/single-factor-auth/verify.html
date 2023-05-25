@@ -81,8 +81,10 @@
             <label for="passcode">Enter TOTP Code:</label>
             <input type="text" id="passcode" name="passcode" required>
             <input type="hidden" name="secretKey" value="{{ .SecretKey }}">
+            <input type="hidden" name="username" value="{{ .Username }}"> <!-- Add this line -->
             <button type="submit">Verify</button>
         </form>
+
     </div>
 </body>
 

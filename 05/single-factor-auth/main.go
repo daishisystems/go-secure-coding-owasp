@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/pquerna/otp/totp"
 )
@@ -22,24 +23,25 @@ var userSecretKeys map[string]string
 
 func main() {
 	userSecretKeys = make(map[string]string)
-	http.HandleFunc("/", loginHandler)
+	http.HandleFunc("/", redirectToHomeHandler)
+	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/verify", verifyHandler)
-	http.HandleFunc("/home", homeHandler)
+	http.HandleFunc("/home", homeRedirectHandler)
+	http.HandleFunc("/home.html", homeHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "home.html")
+func redirectToHomeHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/home.html", http.StatusSeeOther)
 }
 
-func isAuthenticated(r *http.Request) bool {
-	// Implement your authentication logic here
-	// For example, you can check if a session or token exists
-	// and verify its validity to determine if the user is authenticated
+func homeRedirectHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/home.html", http.StatusSeeOther)
+}
 
-	// Return true if the user is authenticated, false otherwise
-	return true
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "home.html")
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -129,10 +131,21 @@ func verifyHandler(w http.ResponseWriter, r *http.Request) {
 		// Retrieve the passcode and secret key from the form
 		passcode := r.FormValue("passcode")
 		secretKey := r.FormValue("secretKey")
+		username := r.FormValue("username")
 
 		// Validate the TOTP passcode
 		valid := totp.Validate(passcode, secretKey)
 		if valid {
+			// Set the login cookie
+			expiration := time.Now().UTC().Add(24 * time.Hour) // Set the cookie expiration time (e.g., 24 hours)
+			cookie := http.Cookie{
+				Name:     "user",
+				Value:    username,
+				Expires:  expiration,
+				HttpOnly: true,
+			}
+			http.SetCookie(w, &cookie)
+
 			// Redirect to the home page
 			http.Redirect(w, r, "/home.html", http.StatusSeeOther)
 			return
