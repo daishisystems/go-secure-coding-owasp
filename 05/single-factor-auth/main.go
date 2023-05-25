@@ -41,6 +41,14 @@ func homeRedirectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the login cookie exists
+	cookie, err := r.Cookie("user")
+	if err != nil || cookie.Value == "" {
+		// Cookie does not exist or is empty, redirect to the login page
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
 	http.ServeFile(w, r, "home.html")
 }
 
