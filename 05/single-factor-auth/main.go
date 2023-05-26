@@ -1,177 +1,80 @@
 package main
 
 import (
-	"bytes"
-	"encoding/base64"
-	"fmt"
-	"html/template"
-	"image/png"
-	"log"
-	"net/http"
-	"time"
+	"database/sql"  // Package for working with SQL databases
+	"fmt"           // Package to format text
+	"html/template" // Package to parse and execute HTML templates
+	"log"           // Package for logging
+	"net/http"      // Package for HTTP requests and responses
 
-	"github.com/pquerna/otp/totp"
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
+	"golang.org/x/crypto/bcrypt"       // Package to hash and compare passwords
 )
 
-type TemplateData struct {
-	Username    string
-	QRCodeImage string
-	SecretKey   string
+// Define a struct to hold information about a user
+type user struct {
+	id       int
+	username string
+	password string
 }
-
-var userSecretKeys map[string]string
 
 func main() {
-	userSecretKeys = make(map[string]string)
-	http.HandleFunc("/", redirectToHomeHandler)
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/verify", verifyHandler)
-	http.HandleFunc("/home", homeRedirectHandler)
-	http.HandleFunc("/home.html", homeHandler)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func redirectToHomeHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/home.html", http.StatusSeeOther)
-}
-
-func homeRedirectHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/home.html", http.StatusSeeOther)
-}
-
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	// Check if the login cookie exists
-	cookie, err := r.Cookie("user")
-	if err != nil || cookie.Value == "" {
-		// Cookie does not exist or is empty, redirect to the login page
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
+	// Connect to MySQL database using a DSN (Data Source Name)
+	db, err := sql.Open("mysql", "root:admin@tcp(localhost:3306)/globomantics")
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer db.Close() // Defer closing the database connection until the end of the function
 
-	http.ServeFile(w, r, "home.html")
-}
+	// Serve the login page
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			// Get the username and password submitted in the login form
+			username := r.FormValue("username")
+			password := r.FormValue("password")
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		username := r.FormValue("username")
-
-		// Check if the user already has a secret key stored
-		secretKey, ok := userSecretKeys[username]
-		if !ok {
-			// Generate TOTP key
-			key, err := totp.Generate(totp.GenerateOpts{
-				Issuer:      "globomantics.com",
-				AccountName: username,
-			})
+			// Query the database for the user with the given username
+			row := db.QueryRow("SELECT id, username, password FROM users WHERE username = ?", username)
+			var u user
+			err := row.Scan(&u.id, &u.username, &u.password)
 			if err != nil {
-				log.Fatal(err)
+				// Log the error and return an HTTP 401 Unauthorized response
+				log.Printf("Failed login attempt for user %q: %v", username, err)
+				http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+				return
 			}
 
-			// Store the secret key
-			userSecretKeys[username] = key.Secret()
-			secretKey = key.Secret()
-
-			// Convert TOTP key into a PNG image
-			img, err := key.Image(200, 200)
+			// Check if the password is correct using bcrypt
+			err = bcrypt.CompareHashAndPassword([]byte(u.password), []byte(password))
 			if err != nil {
-				log.Fatal(err)
+				// Log the error and return an HTTP 401 Unauthorized response
+				log.Printf("Failed login attempt for user %q: %v", username, err)
+				http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+				return
 			}
 
-			// Encode PNG image to byte slice
-			var buf bytes.Buffer
-			err = png.Encode(&buf, img)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			qrCodeImage := base64.StdEncoding.EncodeToString(buf.Bytes())
-
-			// Prepare the data for the template
-			data := TemplateData{
-				Username:    username,
-				QRCodeImage: qrCodeImage,
-				SecretKey:   secretKey,
-			}
-
-			tmpl, err := template.ParseFiles("verify.html")
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = tmpl.Execute(w, data)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			// User already has a secret key, display the verification form directly
-			data := TemplateData{
-				Username:  username,
-				SecretKey: secretKey,
-			}
-
-			tmpl, err := template.ParseFiles("verify.html")
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = tmpl.Execute(w, data)
-			if err != nil {
-				log.Fatal(err)
-			}
+			// If the login was successful, display a welcome message
+			fmt.Fprintf(w, "Welcome, %s!", u.username)
+			return
 		}
-	} else {
-		// Render the login page
-		tmpl, err := template.ParseFiles("login.html")
+
+		// If the login form was not submitted yet, serve the login form
+		tmpl, err := template.ParseFiles("login.html") // Parse the login form template
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		// Set the Content-Type header of the response to "text/html"
+		w.Header().Set("Content-Type", "text/html")
+
+		// Execute the login form template with no data and write the result to the response
 		err = tmpl.Execute(w, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-}
+	})
 
-func verifyHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		// Retrieve the passcode and secret key from the form
-		passcode := r.FormValue("passcode")
-		secretKey := r.FormValue("secretKey")
-		username := r.FormValue("username")
-
-		// Validate the TOTP passcode
-		valid := totp.Validate(passcode, secretKey)
-		if valid {
-			// Set the login cookie
-			expiration := time.Now().UTC().Add(24 * time.Hour) // Set the cookie expiration time (e.g., 24 hours)
-			cookie := http.Cookie{
-				Name:     "user",
-				Value:    username,
-				Expires:  expiration,
-				HttpOnly: true,
-			}
-			http.SetCookie(w, &cookie)
-
-			// Redirect to the home page
-			http.Redirect(w, r, "/home.html", http.StatusSeeOther)
-			return
-		} else {
-			// Authentication failed, show error message
-			fmt.Fprintf(w, "Authentication failed!")
-			return
-		}
-	}
-
-	// Handle GET request for the verification page
-	tmpl, err := template.ParseFiles("verify.html")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = tmpl.Execute(w, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Listen on port 8080 and serve requests indefinitely
+	log.Println("Listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
