@@ -1,3 +1,7 @@
+CREATE DATABASE IF NOT EXISTS Globomantics;
+
+USE Globomantics;
+
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id INT AUTO_INCREMENT,
