@@ -23,7 +23,7 @@ type Claims struct {
 
 // create a JWT and put in the clients cookie
 func setToken(res http.ResponseWriter, req *http.Request) {
-	// 30m Expiration for non-sensitive applications - OWSAP
+	// 30m Expiration for non-sensitive applications - OWASP
 	expireToken := time.Now().Add(time.Minute * 30).Unix()
 	expireCookie := time.Now().Add(time.Minute * 30)
 
