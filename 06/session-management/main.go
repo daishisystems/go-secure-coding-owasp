@@ -117,6 +117,7 @@ func logout(res http.ResponseWriter, req *http.Request) {
 	}
 
 	http.SetCookie(res, &deleteCookie)
+	http.Redirect(res, req, "/profile", http.StatusTemporaryRedirect)
 }
 
 func main() {
