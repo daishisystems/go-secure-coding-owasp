@@ -408,3 +408,4 @@ FodyWeavers.xsd
 04/sql-injection/.vscode/launch.json
 05/single-factor-auth/.vscode/launch.json
 05/single-factor-auth/qr-code.png
+07/cryptographic-practices/.vscode/launch.json
