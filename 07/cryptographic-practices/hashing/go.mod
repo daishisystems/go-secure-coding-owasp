@@ -1,4 +1,4 @@
-module github.com/daishisystems/go-secure-coding-owasp/06/cryptographic-practices
+module github.com/daishisystems/go-secure-coding-owasp/06/cryptographic-practices/hashing
 
 go 1.20
 
