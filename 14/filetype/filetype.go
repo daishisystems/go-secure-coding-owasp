@@ -6,15 +6,27 @@ import (
 	"os"
 )
 
+const (
+	logoFile       = "./logo.jpg"
+	maxContentType = 512
+)
+
+var allowedFileTypes = []string{
+	"image/jpeg",
+	"image/jpg",
+	"image/gif",
+	"image/png",
+}
+
 func main() {
-	file, err := os.Open("./logo.png")
+	file, err := os.Open(logoFile)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	defer file.Close()
 
-	buff := make([]byte, 512)
+	buff := make([]byte, maxContentType)
 	_, err = file.Read(buff)
 	if err != nil {
 		fmt.Println(err)
@@ -23,10 +35,18 @@ func main() {
 
 	filetype := http.DetectContentType(buff)
 
-	switch filetype {
-	case "image/jpeg", "image/jpg", "image/gif", "image/png":
+	if isValidFileType(filetype) {
 		fmt.Println(filetype)
-	default:
+	} else {
 		fmt.Println("unknown file type uploaded")
 	}
+}
+
+func isValidFileType(filetype string) bool {
+	for _, allowedType := range allowedFileTypes {
+		if filetype == allowedType {
+			return true
+		}
+	}
+	return false
 }
