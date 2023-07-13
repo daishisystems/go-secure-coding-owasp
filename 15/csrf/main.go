@@ -7,8 +7,6 @@ import (
 	csrf "github.com/utrack/gin-csrf"
 )
 
-// not working from Postman, try adding a UI here
-
 func main() {
 	r := gin.Default()
 	store := cookie.NewStore([]byte("secret"))
